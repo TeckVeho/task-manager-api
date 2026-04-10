@@ -2,6 +2,7 @@ import express from 'express';
 import { userRouter } from './routes/users';
 import { taskRouter } from './routes/tasks';
 import { categoryRouter } from './routes/categories';
+import { assignmentRouter } from './routes/assignments';
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
@@ -16,6 +17,7 @@ app.get('/health', (_req, res) => {
 app.use('/api/users', userRouter);
 app.use('/api/tasks', taskRouter);
 app.use('/api/categories', categoryRouter);
+app.use('/api', assignmentRouter);
 
 if (require.main === module) {
   app.listen(PORT, () => {
