@@ -1,0 +1,40 @@
+---
+description: このプロジェクトの TypeScript・Express コーディング規約
+globs: src/**/*.ts
+alwaysApply: false
+---
+
+# TypeScript / Express 規約
+
+## ディレクトリ構成
+
+```
+src/
+  types/index.ts       # 共有型定義（変更は順列タスク扱い）
+  routes/              # Express ルーター（1機能1ファイル）
+  controllers/         # リクエスト処理ロジック
+  services/            # ビジネスロジック
+  middleware/          # 認証・バリデーション
+  __tests__/           # テストファイル（同名 .test.ts）
+```
+
+## コーディングルール
+
+- `any` 型は禁止。`unknown` を使うこと
+- エラーは必ず `ApiResponse<T>` 型で返す
+- 非同期処理は `async/await`（Promise チェーンは使わない）
+- インメモリ DB（`Map<string, T>`）で実装する（外部 DB 不要）
+
+## ルーター登録
+
+新しいルーターは `src/index.ts` の所定箇所に追加する：
+
+```typescript
+// ルーター登録（この下に追加）
+app.use('/api/users', userRouter);
+```
+
+## テスト
+
+- `supertest` でエンドポイントテストを書く
+- 各モジュールに最低3ケース（正常・バリデーションエラー・存在しない場合）

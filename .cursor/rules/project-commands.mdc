@@ -1,0 +1,22 @@
+---
+description: このプロジェクトで使うコマンド一覧
+alwaysApply: true
+---
+
+# プロジェクトコマンド
+
+```bash
+npm run typecheck   # 型チェック（変更後は必ず実行）
+npm test            # テスト実行
+npm run build       # ビルド
+npm run dev         # 開発サーバー起動（port 3000）
+```
+
+## テスト実行の優先順位
+
+1. 変更ファイルに対応するテストのみ: `npm test -- --testPathPattern=<module>`
+2. 全体: `npm test`
+
+## インメモリ DB のリセット
+
+テスト間でデータが干渉しないよう、各テストファイルの `beforeEach` で DB をリセットすること。
