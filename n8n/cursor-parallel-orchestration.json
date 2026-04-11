@@ -5,7 +5,8 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "cursor-orchestrate",
-        "responseMode": "lastNode",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
         "options": {}
       },
       "id": "node-webhook",
@@ -261,24 +262,12 @@
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.2,
       "position": [2160, 520]
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"status\": \"accepted\", \"message\": \"Orchestration started\" }"
-      },
-      "id": "node-respond",
-      "name": "Respond to Webhook",
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1,
-      "position": [300, 600]
     }
   ],
   "connections": {
     "Webhook": {
       "main": [[
-        { "node": "Parse Execution Plan", "type": "main", "index": 0 },
-        { "node": "Respond to Webhook", "type": "main", "index": 0 }
+        { "node": "Parse Execution Plan", "type": "main", "index": 0 }
       ]]
     },
     "Parse Execution Plan": {
