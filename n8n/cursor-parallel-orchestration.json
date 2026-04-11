@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nconst plan = typeof body === 'string' ? JSON.parse(body) : body;\n\n// repository は URL 形式 or 'owner/name' 形式どちらも受け付ける\nconst repository = plan.repository\n  ?? (plan.repo?.startsWith('http') ? plan.repo : `https://github.com/${plan.repo}`);\n\nreturn [{\n  json: {\n    repository,\n    ref: plan.ref ?? 'master',\n    parallelTasks: plan.parallel_group_a ?? [],\n    sequentialTasks: plan.sequential_group_b ?? [],\n    pollCount: 0,\n    maxPolls: 20\n  }\n}];"
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nconst plan = typeof body === 'string' ? JSON.parse(body) : body;\n\nconst repository = plan.repository\n  ?? (plan.repo?.startsWith('http') ? plan.repo : `https://github.com/${plan.repo}`);\n\nreturn [{\n  json: {\n    repository,\n    ref: plan.ref ?? 'master',\n    parallelTasks: plan.parallel_group_a ?? [],\n    sequentialTasks: plan.sequential_group_b ?? [],\n    pollCount: 0,\n    maxPolls: 20\n  }\n}];"
       },
       "id": "node-parse",
       "name": "Parse Execution Plan",
@@ -29,8 +29,19 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.cursor.com/v0/agents",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Y3Jzcl82NmY0NzQ2MTBjZWUyNDM4ZGI0MzBhNDBkMjI3OTk4ZmM3ODA1N2FlYjM2MjQxNTIxMDY5YzNiZGUyYjRjZTNiOg=="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[0].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $('Parse Execution Plan').first().json.repository }}\",\n    \"ref\": \"{{ $('Parse Execution Plan').first().json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
@@ -40,17 +51,25 @@
       "name": "Launch Agent A1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [520, 200],
-      "credentials": {
-        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
-      }
+      "position": [520, 200]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.cursor.com/v0/agents",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Y3Jzcl82NmY0NzQ2MTBjZWUyNDM4ZGI0MzBhNDBkMjI3OTk4ZmM3ODA1N2FlYjM2MjQxNTIxMDY5YzNiZGUyYjRjZTNiOg=="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[1].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $('Parse Execution Plan').first().json.repository }}\",\n    \"ref\": \"{{ $('Parse Execution Plan').first().json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
@@ -60,17 +79,25 @@
       "name": "Launch Agent A2",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [520, 400],
-      "credentials": {
-        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
-      }
+      "position": [520, 400]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.cursor.com/v0/agents",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Y3Jzcl82NmY0NzQ2MTBjZWUyNDM4ZGI0MzBhNDBkMjI3OTk4ZmM3ODA1N2FlYjM2MjQxNTIxMDY5YzNiZGUyYjRjZTNiOg=="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[2].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $('Parse Execution Plan').first().json.repository }}\",\n    \"ref\": \"{{ $('Parse Execution Plan').first().json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
@@ -80,10 +107,7 @@
       "name": "Launch Agent A3",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [520, 600],
-      "credentials": {
-        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
-      }
+      "position": [520, 600]
     },
     {
       "parameters": {
@@ -129,18 +153,22 @@
       "parameters": {
         "method": "GET",
         "url": "=https://api.cursor.com/v0/agents/{{ $json.agentId }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Y3Jzcl82NmY0NzQ2MTBjZWUyNDM4ZGI0MzBhNDBkMjI3OTk4ZmM3ODA1N2FlYjM2MjQxNTIxMDY5YzNiZGUyYjRjZTNiOg=="
+            }
+          ]
+        },
         "options": {}
       },
       "id": "node-poll-a",
       "name": "Poll Group A Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1540, 400],
-      "credentials": {
-        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
-      }
+      "position": [1540, 400]
     },
     {
       "parameters": {
@@ -177,8 +205,19 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.cursor.com/v0/agents",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Y3Jzcl82NmY0NzQ2MTBjZWUyNDM4ZGI0MzBhNDBkMjI3OTk4ZmM3ODA1N2FlYjM2MjQxNTIxMDY5YzNiZGUyYjRjZTNiOg=="
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $json.sequentialTasks[0].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $json.repository }}\",\n    \"ref\": \"{{ $json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
@@ -188,10 +227,7 @@
       "name": "Launch Sequential Agent B1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2160, 280],
-      "credentials": {
-        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
-      }
+      "position": [2160, 280]
     },
     {
       "parameters": { "amount": 30, "unit": "seconds" },
@@ -205,18 +241,22 @@
       "parameters": {
         "method": "GET",
         "url": "=https://api.cursor.com/v0/agents/{{ $('Launch Sequential Agent B1').first().json.id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Basic Y3Jzcl82NmY0NzQ2MTBjZWUyNDM4ZGI0MzBhNDBkMjI3OTk4ZmM3ODA1N2FlYjM2MjQxNTIxMDY5YzNiZGUyYjRjZTNiOg=="
+            }
+          ]
+        },
         "options": {}
       },
       "id": "node-poll-b",
       "name": "Poll Group B Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2560, 280],
-      "credentials": {
-        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
-      }
+      "position": [2560, 280]
     },
     {
       "parameters": {
