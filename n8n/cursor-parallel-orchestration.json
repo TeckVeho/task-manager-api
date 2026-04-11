@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nconst plan = typeof body === 'string' ? JSON.parse(body) : body;\n\nreturn [{\n  json: {\n    repo: plan.repo,\n    parallelTasks: plan.parallel_group_a ?? [],\n    sequentialTasks: plan.sequential_group_b ?? [],\n    agentIds: [],\n    pollCount: 0,\n    maxPolls: 20\n  }\n}];"
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nconst plan = typeof body === 'string' ? JSON.parse(body) : body;\n\n// repository は URL 形式 or 'owner/name' 形式どちらも受け付ける\nconst repository = plan.repository\n  ?? (plan.repo?.startsWith('http') ? plan.repo : `https://github.com/${plan.repo}`);\n\nreturn [{\n  json: {\n    repository,\n    ref: plan.ref ?? 'master',\n    parallelTasks: plan.parallel_group_a ?? [],\n    sequentialTasks: plan.sequential_group_b ?? [],\n    pollCount: 0,\n    maxPolls: 20\n  }\n}];"
       },
       "id": "node-parse",
       "name": "Parse Execution Plan",
@@ -28,12 +28,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.cursor.com/agents",
+        "url": "https://api.cursor.com/v0/agents",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"repo\": \"{{ $('Parse Execution Plan').first().json.repo }}\",\n  \"prompt\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[0].prompt }}\",\n  \"branch\": \"agent/{{ $('Parse Execution Plan').first().json.parallelTasks[0].name }}\"\n}",
+        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[0].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $('Parse Execution Plan').first().json.repository }}\",\n    \"ref\": \"{{ $('Parse Execution Plan').first().json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
         "options": {}
       },
       "id": "node-launch-a1",
@@ -42,18 +42,18 @@
       "typeVersion": 4,
       "position": [520, 200],
       "credentials": {
-        "httpHeaderAuth": { "id": "cursor-api-key", "name": "Cursor API Key" }
+        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
       }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.cursor.com/agents",
+        "url": "https://api.cursor.com/v0/agents",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"repo\": \"{{ $('Parse Execution Plan').first().json.repo }}\",\n  \"prompt\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[1].prompt }}\",\n  \"branch\": \"agent/{{ $('Parse Execution Plan').first().json.parallelTasks[1].name }}\"\n}",
+        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[1].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $('Parse Execution Plan').first().json.repository }}\",\n    \"ref\": \"{{ $('Parse Execution Plan').first().json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
         "options": {}
       },
       "id": "node-launch-a2",
@@ -62,18 +62,18 @@
       "typeVersion": 4,
       "position": [520, 400],
       "credentials": {
-        "httpHeaderAuth": { "id": "cursor-api-key", "name": "Cursor API Key" }
+        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
       }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.cursor.com/agents",
+        "url": "https://api.cursor.com/v0/agents",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"repo\": \"{{ $('Parse Execution Plan').first().json.repo }}\",\n  \"prompt\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[2].prompt }}\",\n  \"branch\": \"agent/{{ $('Parse Execution Plan').first().json.parallelTasks[2].name }}\"\n}",
+        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[2].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $('Parse Execution Plan').first().json.repository }}\",\n    \"ref\": \"{{ $('Parse Execution Plan').first().json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
         "options": {}
       },
       "id": "node-launch-a3",
@@ -82,7 +82,7 @@
       "typeVersion": 4,
       "position": [520, 600],
       "credentials": {
-        "httpHeaderAuth": { "id": "cursor-api-key", "name": "Cursor API Key" }
+        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
       }
     },
     {
@@ -99,7 +99,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst agentIds = items.map(i => i.json.id).filter(Boolean);\n\nreturn [{\n  json: {\n    agentIds,\n    pollCount: 0,\n    maxPolls: 20,\n    repo: $('Parse Execution Plan').first().json.repo,\n    sequentialTasks: $('Parse Execution Plan').first().json.sequentialTasks\n  }\n}];"
+        "jsCode": "const items = $input.all();\nconst agentIds = items.map(i => i.json.id).filter(Boolean);\n\nreturn [{\n  json: {\n    agentIds,\n    pollCount: 0,\n    maxPolls: 20,\n    repository: $('Parse Execution Plan').first().json.repository,\n    ref: $('Parse Execution Plan').first().json.ref,\n    sequentialTasks: $('Parse Execution Plan').first().json.sequentialTasks\n  }\n}];"
       },
       "id": "node-collect-ids",
       "name": "Collect Agent IDs",
@@ -117,7 +117,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const { agentIds, pollCount, maxPolls, repo, sequentialTasks } = $input.first().json;\nconst results = [];\n\nfor (const agentId of agentIds) {\n  results.push({\n    json: { agentId, pollCount: pollCount + 1, maxPolls, repo, sequentialTasks, agentIds }\n  });\n}\n\nreturn results;"
+        "jsCode": "const { agentIds, pollCount, maxPolls, repository, ref, sequentialTasks } = $input.first().json;\nconst results = [];\n\nfor (const agentId of agentIds) {\n  results.push({\n    json: { agentId, pollCount: pollCount + 1, maxPolls, repository, ref, sequentialTasks, agentIds }\n  });\n}\n\nreturn results;"
       },
       "id": "node-prepare-poll",
       "name": "Prepare Poll",
@@ -128,9 +128,9 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://api.cursor.com/agents/{{ $json.agentId }}",
+        "url": "=https://api.cursor.com/v0/agents/{{ $json.agentId }}",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "genericAuthType": "httpBasicAuth",
         "options": {}
       },
       "id": "node-poll-a",
@@ -139,12 +139,12 @@
       "typeVersion": 4,
       "position": [1540, 400],
       "credentials": {
-        "httpHeaderAuth": { "id": "cursor-api-key", "name": "Cursor API Key" }
+        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
       }
     },
     {
       "parameters": {
-        "jsCode": "const items = $input.all();\nconst statuses = items.map(i => i.json.status);\nconst agentIds = items.map(i => i.json.id ?? i.json.agentId);\nconst pollCount = $('Prepare Poll').first().json.pollCount;\nconst maxPolls = $('Prepare Poll').first().json.maxPolls;\nconst repo = $('Prepare Poll').first().json.repo;\nconst sequentialTasks = $('Prepare Poll').first().json.sequentialTasks;\n\nconst failed = statuses.filter(s => s === 'FAILED');\nconst allFinished = statuses.every(s => s === 'FINISHED');\nconst timeout = pollCount >= maxPolls;\n\nreturn [{\n  json: {\n    statuses,\n    agentIds,\n    allFinished: allFinished || timeout,\n    failed,\n    timeout,\n    pollCount,\n    maxPolls,\n    repo,\n    sequentialTasks\n  }\n}];"
+        "jsCode": "const items = $input.all();\nconst statuses = items.map(i => i.json.status);\nconst agentIds = items.map(i => i.json.id ?? i.json.agentId);\nconst pollCount = $('Prepare Poll').first().json.pollCount;\nconst maxPolls = $('Prepare Poll').first().json.maxPolls;\nconst repository = $('Prepare Poll').first().json.repository;\nconst ref = $('Prepare Poll').first().json.ref;\nconst sequentialTasks = $('Prepare Poll').first().json.sequentialTasks;\n\nconst failed = statuses.filter(s => s === 'FAILED');\nconst allFinished = statuses.every(s => s === 'FINISHED');\nconst timeout = pollCount >= maxPolls;\n\nreturn [{\n  json: {\n    statuses,\n    agentIds,\n    allFinished: allFinished || timeout,\n    failed,\n    timeout,\n    pollCount,\n    maxPolls,\n    repository,\n    ref,\n    sequentialTasks\n  }\n}];"
       },
       "id": "node-check-a",
       "name": "Check Group A Done",
@@ -176,12 +176,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.cursor.com/agents",
+        "url": "https://api.cursor.com/v0/agents",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "genericAuthType": "httpBasicAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"repo\": \"{{ $json.repo }}\",\n  \"prompt\": \"{{ $json.sequentialTasks[0].prompt }}\",\n  \"branch\": \"agent/{{ $json.sequentialTasks[0].name }}\"\n}",
+        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $json.sequentialTasks[0].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $json.repository }}\",\n    \"ref\": \"{{ $json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
         "options": {}
       },
       "id": "node-launch-b1",
@@ -190,7 +190,7 @@
       "typeVersion": 4,
       "position": [2160, 280],
       "credentials": {
-        "httpHeaderAuth": { "id": "cursor-api-key", "name": "Cursor API Key" }
+        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
       }
     },
     {
@@ -204,9 +204,9 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://api.cursor.com/agents/{{ $('Launch Sequential Agent B1').first().json.id }}",
+        "url": "=https://api.cursor.com/v0/agents/{{ $('Launch Sequential Agent B1').first().json.id }}",
         "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "genericAuthType": "httpBasicAuth",
         "options": {}
       },
       "id": "node-poll-b",
@@ -215,7 +215,7 @@
       "typeVersion": 4,
       "position": [2560, 280],
       "credentials": {
-        "httpHeaderAuth": { "id": "cursor-api-key", "name": "Cursor API Key" }
+        "httpBasicAuth": { "id": "cursor-basic-auth", "name": "Cursor Basic Auth" }
       }
     },
     {
