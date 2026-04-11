@@ -17,7 +17,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nconst plan = typeof body === 'string' ? JSON.parse(body) : body;\n\nconst repository = plan.repository\n  ?? (plan.repo?.startsWith('http') ? plan.repo : `https://github.com/${plan.repo}`);\n\nreturn [{\n  json: {\n    repository,\n    ref: plan.ref ?? 'master',\n    parallelTasks: plan.parallel_group_a ?? [],\n    sequentialTasks: plan.sequential_group_b ?? [],\n    pollCount: 0,\n    maxPolls: 20\n  }\n}];"
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nconst plan = typeof body === 'string' ? JSON.parse(body) : body;\n\nconst repository = plan.repository\n  ?? (plan.repo?.startsWith('http') ? plan.repo : `https://github.com/${plan.repo}`);\n\nconst parallelTasks = plan.parallel_group_a ?? [];\nconst sequentialTasks = plan.sequential_group_b ?? [];\n\n// 並列タスクを個別アイテムに展開（タスクがない場合はスキップ用ダミー）\nif (parallelTasks.length === 0) {\n  return [{ json: { _skip: true, repository, ref: plan.ref ?? 'master', sequentialTasks } }];\n}\n\nreturn parallelTasks.map(task => ({\n  json: {\n    prompt: task.prompt,\n    name: task.name,\n    repository,\n    ref: plan.ref ?? 'master',\n    sequentialTasks,\n    maxPolls: 20\n  }\n}));"
       },
       "id": "node-parse",
       "name": "Parse Execution Plan",
@@ -44,92 +44,24 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[0].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $('Parse Execution Plan').first().json.repository }}\",\n    \"ref\": \"{{ $('Parse Execution Plan').first().json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
+        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $json.prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $json.repository }}\",\n    \"ref\": \"{{ $json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
         "options": {}
       },
-      "id": "node-launch-a1",
-      "name": "Launch Agent A1",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [520, 200]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.cursor.com/v0/agents",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Basic Y3Jzcl82NmY0NzQ2MTBjZWUyNDM4ZGI0MzBhNDBkMjI3OTk4ZmM3ODA1N2FlYjM2MjQxNTIxMDY5YzNiZGUyYjRjZTNiOg=="
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[1].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $('Parse Execution Plan').first().json.repository }}\",\n    \"ref\": \"{{ $('Parse Execution Plan').first().json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
-        "options": {}
-      },
-      "id": "node-launch-a2",
-      "name": "Launch Agent A2",
+      "id": "node-launch-parallel",
+      "name": "Launch Parallel Agent",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [520, 400]
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.cursor.com/v0/agents",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "Basic Y3Jzcl82NmY0NzQ2MTBjZWUyNDM4ZGI0MzBhNDBkMjI3OTk4ZmM3ODA1N2FlYjM2MjQxNTIxMDY5YzNiZGUyYjRjZTNiOg=="
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $('Parse Execution Plan').first().json.parallelTasks[2].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $('Parse Execution Plan').first().json.repository }}\",\n    \"ref\": \"{{ $('Parse Execution Plan').first().json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
-        "options": {}
-      },
-      "id": "node-launch-a3",
-      "name": "Launch Agent A3",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [520, 600]
-    },
-    {
-      "parameters": {
-        "mode": "multiplex",
-        "clashHandling": { "values": { "resolveClash": "addSuffix" } },
-        "options": {}
-      },
-      "id": "node-merge",
-      "name": "Merge Agent IDs",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [740, 400]
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.all();\nconst agentIds = items.map(i => i.json.id).filter(Boolean);\n\nreturn [{\n  json: {\n    agentIds,\n    pollCount: 0,\n    maxPolls: 20,\n    repository: $('Parse Execution Plan').first().json.repository,\n    ref: $('Parse Execution Plan').first().json.ref,\n    sequentialTasks: $('Parse Execution Plan').first().json.sequentialTasks\n  }\n}];"
+        "jsCode": "const items = $input.all();\nconst agentIds = items.map(i => i.json.id).filter(Boolean);\nconst first = items[0]?.json ?? {};\n\nreturn [{\n  json: {\n    agentIds,\n    pollCount: 0,\n    maxPolls: first.maxPolls ?? 20,\n    repository: $('Parse Execution Plan').first().json.repository,\n    ref: $('Parse Execution Plan').first().json.ref,\n    sequentialTasks: $('Parse Execution Plan').first().json.sequentialTasks\n  }\n}];"
       },
       "id": "node-collect-ids",
       "name": "Collect Agent IDs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [940, 400]
+      "position": [740, 400]
     },
     {
       "parameters": { "amount": 30, "unit": "seconds" },
@@ -137,7 +69,7 @@
       "name": "Wait 30s (Group A)",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
-      "position": [1140, 400]
+      "position": [940, 400]
     },
     {
       "parameters": {
@@ -147,7 +79,7 @@
       "name": "Prepare Poll",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1340, 400]
+      "position": [1140, 400]
     },
     {
       "parameters": {
@@ -168,7 +100,7 @@
       "name": "Poll Group A Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [1540, 400]
+      "position": [1340, 400]
     },
     {
       "parameters": {
@@ -178,7 +110,7 @@
       "name": "Check Group A Done",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1740, 400]
+      "position": [1540, 400]
     },
     {
       "parameters": {
@@ -199,7 +131,36 @@
       "name": "All Group A Finished?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1940, 400]
+      "position": [1740, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "id": "cond-has-seq",
+              "leftValue": "={{ $json.sequentialTasks.length }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ]
+        }
+      },
+      "id": "node-if-has-seq",
+      "name": "Has Sequential Tasks?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1940, 280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { sequentialTasks, repository, ref } = $input.first().json;\n\nreturn sequentialTasks.map(task => ({\n  json: { prompt: task.prompt, name: task.name, repository, ref }\n}));"
+      },
+      "id": "node-parse-seq",
+      "name": "Parse Sequential Tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2140, 200]
     },
     {
       "parameters": {
@@ -220,27 +181,27 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $json.sequentialTasks[0].prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $json.repository }}\",\n    \"ref\": \"{{ $json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
+        "jsonBody": "={\n  \"prompt\": { \"text\": \"{{ $json.prompt }}\" },\n  \"source\": {\n    \"repository\": \"{{ $json.repository }}\",\n    \"ref\": \"{{ $json.ref }}\"\n  },\n  \"target\": { \"autoCreatePr\": true }\n}",
         "options": {}
       },
-      "id": "node-launch-b1",
-      "name": "Launch Sequential Agent B1",
+      "id": "node-launch-seq",
+      "name": "Launch Sequential Agent",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2160, 280]
+      "position": [2340, 200]
     },
     {
-      "parameters": { "amount": 30, "unit": "seconds" },
+      "parameters": { "amount": 60, "unit": "seconds" },
       "id": "node-wait-b",
-      "name": "Wait 30s (Group B)",
+      "name": "Wait 60s (Sequential)",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
-      "position": [2360, 280]
+      "position": [2540, 200]
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://api.cursor.com/v0/agents/{{ $('Launch Sequential Agent B1').first().json.id }}",
+        "url": "=https://api.cursor.com/v0/agents/{{ $('Launch Sequential Agent').last().json.id }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -252,18 +213,18 @@
         },
         "options": {}
       },
-      "id": "node-poll-b",
-      "name": "Poll Group B Status",
+      "id": "node-poll-seq",
+      "name": "Poll Sequential Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [2560, 280]
+      "position": [2740, 200]
     },
     {
       "parameters": {
         "conditions": {
           "conditions": [
             {
-              "id": "cond-b-done",
+              "id": "cond-seq-done",
               "leftValue": "={{ $json.status }}",
               "rightValue": "FINISHED",
               "operator": { "type": "string", "operation": "equals" }
@@ -271,75 +232,109 @@
           ]
         }
       },
-      "id": "node-if-b-done",
-      "name": "Group B Finished?",
+      "id": "node-if-seq-done",
+      "name": "Sequential Finished?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [2760, 280]
+      "position": [2940, 200]
     },
     {
       "parameters": {
         "select": "channel",
         "channelId": { "value": "#dev-notifications", "__rl": true, "mode": "name" },
-        "text": "=✅ *並列エージェント完了*\n\n*グループA*: {{ $('Check Group A Done').first().json.agentIds.join(', ') }}\n*グループB*: {{ $('Launch Sequential Agent B1').first().json.id }}\n\nすべての PR を確認してください。",
+        "text": "=✅ *全エージェント完了*\n\n*グループA agent IDs*: {{ $('Check Group A Done').first().json.agentIds.join(', ') }}\n\nすべての PR を確認してください。\nhttps://cursor.com/agents",
         "otherOptions": {}
       },
       "id": "node-slack-success",
       "name": "Slack: Success",
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.2,
-      "position": [2980, 200]
+      "position": [3140, 200]
     },
     {
       "parameters": {
         "select": "channel",
         "channelId": { "value": "#dev-notifications", "__rl": true, "mode": "name" },
-        "text": "=⚠️ *エージェント失敗またはタイムアウト*\n\n失敗したエージェント: {{ $('Check Group A Done').first().json.failed.join(', ') }}\n\n手動で確認: https://cursor.com/agents",
+        "text": "=⚠️ *エージェント失敗またはタイムアウト*\n\n失敗: {{ $('Check Group A Done').first().json.failed.join(', ') }}\n\n手動で確認: https://cursor.com/agents",
         "otherOptions": {}
       },
       "id": "node-slack-fail",
       "name": "Slack: Failed",
       "type": "n8n-nodes-base.slack",
       "typeVersion": 2.2,
-      "position": [2160, 520]
+      "position": [1940, 520]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": { "value": "#dev-notifications", "__rl": true, "mode": "name" },
+        "text": "=✅ *グループA完了（順列タスクなし）*\n\n*agent IDs*: {{ $json.agentIds.join(', ') }}\n\nPR を確認してください。\nhttps://cursor.com/agents",
+        "otherOptions": {}
+      },
+      "id": "node-slack-a-only",
+      "name": "Slack: Group A Only Done",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2140, 380]
     }
   ],
   "connections": {
     "Webhook": {
-      "main": [[
-        { "node": "Parse Execution Plan", "type": "main", "index": 0 }
-      ]]
+      "main": [[{ "node": "Parse Execution Plan", "type": "main", "index": 0 }]]
     },
     "Parse Execution Plan": {
-      "main": [[
-        { "node": "Launch Agent A1", "type": "main", "index": 0 },
-        { "node": "Launch Agent A2", "type": "main", "index": 0 },
-        { "node": "Launch Agent A3", "type": "main", "index": 0 }
-      ]]
+      "main": [[{ "node": "Launch Parallel Agent", "type": "main", "index": 0 }]]
     },
-    "Launch Agent A1": { "main": [[{ "node": "Merge Agent IDs", "type": "main", "index": 0 }]] },
-    "Launch Agent A2": { "main": [[{ "node": "Merge Agent IDs", "type": "main", "index": 1 }]] },
-    "Launch Agent A3": { "main": [[{ "node": "Merge Agent IDs", "type": "main", "index": 2 }]] },
-    "Merge Agent IDs": { "main": [[{ "node": "Collect Agent IDs", "type": "main", "index": 0 }]] },
-    "Collect Agent IDs": { "main": [[{ "node": "Wait 30s (Group A)", "type": "main", "index": 0 }]] },
-    "Wait 30s (Group A)": { "main": [[{ "node": "Prepare Poll", "type": "main", "index": 0 }]] },
-    "Prepare Poll": { "main": [[{ "node": "Poll Group A Status", "type": "main", "index": 0 }]] },
-    "Poll Group A Status": { "main": [[{ "node": "Check Group A Done", "type": "main", "index": 0 }]] },
-    "Check Group A Done": { "main": [[{ "node": "All Group A Finished?", "type": "main", "index": 0 }]] },
+    "Launch Parallel Agent": {
+      "main": [[{ "node": "Collect Agent IDs", "type": "main", "index": 0 }]]
+    },
+    "Collect Agent IDs": {
+      "main": [[{ "node": "Wait 30s (Group A)", "type": "main", "index": 0 }]]
+    },
+    "Wait 30s (Group A)": {
+      "main": [[{ "node": "Prepare Poll", "type": "main", "index": 0 }]]
+    },
+    "Prepare Poll": {
+      "main": [[{ "node": "Poll Group A Status", "type": "main", "index": 0 }]]
+    },
+    "Poll Group A Status": {
+      "main": [[{ "node": "Check Group A Done", "type": "main", "index": 0 }]]
+    },
+    "Check Group A Done": {
+      "main": [[{ "node": "All Group A Finished?", "type": "main", "index": 0 }]]
+    },
     "All Group A Finished?": {
       "main": [
-        [{ "node": "Launch Sequential Agent B1", "type": "main", "index": 0 }],
-        [{ "node": "Slack: Failed", "type": "main", "index": 0 }]
+        [{ "node": "Has Sequential Tasks?", "type": "main", "index": 0 }],
+        [{ "node": "Wait 30s (Group A)", "type": "main", "index": 0 }]
       ]
     },
-    "Launch Sequential Agent B1": { "main": [[{ "node": "Wait 30s (Group B)", "type": "main", "index": 0 }]] },
-    "Wait 30s (Group B)": { "main": [[{ "node": "Poll Group B Status", "type": "main", "index": 0 }]] },
-    "Poll Group B Status": { "main": [[{ "node": "Group B Finished?", "type": "main", "index": 0 }]] },
-    "Group B Finished?": {
+    "Has Sequential Tasks?": {
+      "main": [
+        [{ "node": "Parse Sequential Tasks", "type": "main", "index": 0 }],
+        [{ "node": "Slack: Group A Only Done", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse Sequential Tasks": {
+      "main": [[{ "node": "Launch Sequential Agent", "type": "main", "index": 0 }]]
+    },
+    "Launch Sequential Agent": {
+      "main": [[{ "node": "Wait 60s (Sequential)", "type": "main", "index": 0 }]]
+    },
+    "Wait 60s (Sequential)": {
+      "main": [[{ "node": "Poll Sequential Status", "type": "main", "index": 0 }]]
+    },
+    "Poll Sequential Status": {
+      "main": [[{ "node": "Sequential Finished?", "type": "main", "index": 0 }]]
+    },
+    "Sequential Finished?": {
       "main": [
         [{ "node": "Slack: Success", "type": "main", "index": 0 }],
-        [{ "node": "Wait 30s (Group B)", "type": "main", "index": 0 }]
+        [{ "node": "Wait 60s (Sequential)", "type": "main", "index": 0 }]
       ]
+    },
+    "Check Group A Done": {
+      "main": [[{ "node": "All Group A Finished?", "type": "main", "index": 0 }]]
     }
   },
   "settings": { "executionOrder": "v1" },
