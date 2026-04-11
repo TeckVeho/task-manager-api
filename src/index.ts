@@ -10,7 +10,16 @@ const PORT = process.env.PORT ?? 3000;
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  const memoryUsage = process.memoryUsage();
+  res.json({
+    status: 'ok',
+    uptime: process.uptime(),
+    memory: {
+      heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024 * 100) / 100,
+      heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024 * 100) / 100,
+    },
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // ルーター登録（この下に追加）
