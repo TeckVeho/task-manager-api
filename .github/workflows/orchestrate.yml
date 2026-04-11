@@ -1,0 +1,69 @@
+name: Cursor Agent Orchestration
+
+on:
+  workflow_dispatch:
+    inputs:
+      plan_json:
+        description: |
+          DAG 実行計画 JSON（orchestrate-worktrees スキルが出力する形式）
+          例:
+          {
+            "repository": "https://github.com/TeckVeho/task-manager-api",
+            "ref": "master",
+            "tasks": [
+              { "id": "task-1", "name": "ユーザー管理", "prompt": "...", "depends_on": [] },
+              { "id": "task-2", "name": "タスク管理",   "prompt": "...", "depends_on": [] },
+              { "id": "task-3", "name": "アサイン",     "prompt": "...", "depends_on": ["task-1", "task-2"] }
+            ]
+          }
+        required: true
+        type: string
+
+jobs:
+  orchestrate:
+    name: Run DAG Orchestration
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Validate plan JSON
+        run: |
+          echo '${{ inputs.plan_json }}' | python3 -c "
+          import json, sys
+          plan = json.load(sys.stdin)
+          assert 'repository' in plan, 'repository が必要です'
+          assert 'tasks' in plan, 'tasks が必要です'
+          assert len(plan['tasks']) > 0, 'tasks が空です'
+          for t in plan['tasks']:
+              assert 'id' in t, f'task に id が必要です: {t}'
+              assert 'prompt' in t, f'task に prompt が必要です: {t}'
+          print(f'✅ 検証通過: {len(plan[\"tasks\"])} タスク')
+          "
+
+      - name: Run orchestration
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          echo '${{ inputs.plan_json }}' | python scripts/orchestrate.py
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## 実行結果" >> $GITHUB_STEP_SUMMARY
+          echo "- リポジトリ: \`${{ fromJson(inputs.plan_json).repository }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ブランチ: \`${{ fromJson(inputs.plan_json).ref || 'master' }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- タスク数: ${{ fromJson(inputs.plan_json).tasks.length }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "👉 [Cursor Agents ダッシュボード](https://cursor.com/agents)" >> $GITHUB_STEP_SUMMARY
